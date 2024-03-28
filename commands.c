@@ -29,7 +29,6 @@ void changeDirectory(char *dir)
 void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
 {
     if (strchr(args[1], '>') == strrchr(args[1], '>') && (arg_count <= 3)) {
-
         //need to tokenize the second part of the command
         char line[100];
         char *tokens[MAX_ARGUMENTS];
@@ -82,8 +81,10 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
     }
 } // end redirect function
 
-void executeParallelCmd() {
-
+void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
+    if (arg_count > 1) {
+        printf("Ready to receive parallel commands\n");
+    }
 } // end executeParallelCmd()
 
 int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, int arg_count)
@@ -108,10 +109,7 @@ int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, in
     }
     if (redirection_flag == 0) {
         redirect(path, args, arg_count);
-    } else if (parallel_cmd_flag == 0) {
-        executeParallelCmd();
-    }
-    else if (access(temp_path, X_OK) == 0) {
+    } else if (access(temp_path, X_OK) == 0) {
         pid_t pid = fork();
         if (pid < 0) {
             printError();
@@ -129,13 +127,8 @@ int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, in
     return 0;
 }
 
-void executeCommands(char *args[], int arg_count, char (*path)[200], bool parallel_command_flag) {
-    if (parallel_command_flag == true){
-        if (arg_count > 1) {
-            printf("Ready to receive parallel commands\n");
-        }
-    }
-    else if (strcmp(args[0], "exit") == 0) {
+void executeCommands(char *args[], int arg_count, char (*path)[200]) {
+    if (strcmp(args[0], "exit") == 0) {
         if (arg_count > 1) {
             printError();
         } else {

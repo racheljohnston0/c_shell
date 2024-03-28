@@ -36,8 +36,12 @@ void interactiveMode()
         }
         args[arg_count] = NULL;
 
-        if (arg_count != 0 ) {
-        executeCommands(args, arg_count, path, parallel_command_flag);
+        if (parallel_command_flag == true)
+        {
+            executeParallelCmd(args, arg_count, path);
+        }
+        else if (arg_count != 0 ) {
+            executeCommands(args, arg_count, path);
         }
     }
 }
@@ -68,8 +72,12 @@ void batchMode(char *filename)
             }
             args[arg_count] = NULL;
 
-            if (arg_count != 0 ) {
-                executeCommands(args, arg_count, path, parallel_command_flag);
+            if (parallel_command_flag == true)
+            {
+                executeParallelCmd(args, arg_count, path);
+            }
+            else if (arg_count != 0 ) {
+                executeCommands(args, arg_count, path);
             }
         }
         fclose(file);
