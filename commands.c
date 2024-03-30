@@ -8,6 +8,7 @@
 #define MAX_PATH_SIZE 200
 #define MAX_PATH_COUNT 100
 #define MAX_ARGUMENTS 10
+#define MAX_COMMANDS 10
 
 int num_of_paths = 0;
 
@@ -81,12 +82,6 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
     }
 } // end redirect function
 
-void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
-    if (arg_count > 1) {
-        printf("Ready to receive parallel commands\n");
-    }
-} // end executeParallelCmd()
-
 int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, int arg_count)
 {
     char *temp_path = malloc(sizeof(path[i]));
@@ -95,16 +90,11 @@ int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, in
     strcat(temp_path, args[0]);
 
     int redirection_flag = -1;
-    int parallel_cmd_flag = -1;
 
     if (args[i + 1] != NULL) {
         if (strchr(args[i + 1], '>') != NULL)
         {
             redirection_flag = 0;
-        }
-        else if (strchr(args[i + 1], '&') != NULL)
-        {
-            parallel_cmd_flag = 0;
         }
     }
     if (redirection_flag == 0) {
@@ -178,3 +168,38 @@ void executeCommands(char *args[], int arg_count, char (*path)[200]) {
         }
     }
 } // end function
+
+void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
+    if (arg_count > 1) {
+        char *commands[MAX_COMMANDS][MAX_ARGUMENTS + 1]; //hold commands and their arguments
+        int cmd_index = 0;
+        int arg_index = 0;
+
+        for (int i = 0; i < arg_count; i++) {
+            if (i > 0 && i < arg_count - 1 && strcmp(args[i + 1], "&") != 0) {
+                //found "&"
+                commands[cmd_index][arg_index] = NULL;
+                cmd_index++;
+                arg_index = 0;
+            } else {
+                //copy the command or argument into the commands array
+                commands[cmd_index][arg_index] = strdup(args[i]);
+                arg_index++;
+            }
+        }
+        // Terminate the last command
+        commands[cmd_index][arg_index] = NULL;
+
+        // execute each command
+        for (int j = 0; j <= cmd_index; j++) {
+            executeCommands(commands[j], sizeof(commands[j]), path);
+        }
+
+        // free commands[][]
+        for (int j = 0; j <= cmd_index; j++) {
+            for (int k = 0; commands[j][k] != NULL; k++) {
+                free(commands[j][k]);
+            }
+        }
+    }
+} // end executeParallelCmd()
