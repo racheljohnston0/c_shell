@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #include "commands.h"
 
@@ -24,17 +25,38 @@ void interactiveMode()
         input[strcspn(input, "\n")] = '\0';
         bool parallel_command_flag = false;
         int arg_count = 0;
-        char *token = strtok(input, " ");
+        char delimiter = ' ';
+
+        if (strchr(input, '&') != NULL)
+        {
+            delimiter = '&';
+            parallel_command_flag = true;
+        }
+
+        char *token = strtok(input, &delimiter);
         while (token != NULL && arg_count < MAX_ARGUMENTS - 1) {
-            args[arg_count] = token;
-            if (strcmp(args[arg_count], "&") == 0)
-            {
-                parallel_command_flag = true;
+
+            while (*token != '\0' && isspace(*token)) {
+                token++;
             }
+            char *end = token + strlen(token) - 1;
+            while (end > token && isspace(*end)) {
+                *end-- = '\0';
+            }
+
+            printf("Entered while loop for tokenizing.\n");
+            args[arg_count] = token;
             arg_count++;
-            token = strtok(NULL, " ");
+            token = strtok(NULL, &delimiter);
         }
         args[arg_count] = NULL;
+
+        printf("Tokenized by '%c'\n", delimiter);
+
+        for (int i = 0; i < arg_count; i++)
+        {
+            printf("%s\n", args[i]);
+        }
 
         if (parallel_command_flag == true)
         {
@@ -60,15 +82,28 @@ void batchMode(char *filename)
             line[strcspn(line, "\n")] = '\0';
             bool parallel_command_flag = false;
             int arg_count = 0;
-            char *token = strtok(line, " ");
+            char delimiter = ' ';
+
+            if (strchr(line, '&') != NULL)
+            {
+                delimiter = '&';
+                parallel_command_flag = true;
+            }
+
+            char *token = strtok(line, &delimiter);
             while (token != NULL && arg_count < MAX_ARGUMENTS - 1) {
-                args[arg_count] = token;
-                if (strcmp(args[arg_count], "&") == 0)
-                {
-                    parallel_command_flag = true;
+
+                while (*token != '\0' && isspace(*token)) {
+                    token++;
                 }
+                char *end = token + strlen(token) - 1;
+                while (end > token && isspace(*end)) {
+                    *end-- = '\0';
+                }
+
+                args[arg_count] = token;
                 arg_count++;
-                token = strtok(NULL, " ");
+                token = strtok(NULL, &delimiter);
             }
             args[arg_count] = NULL;
 

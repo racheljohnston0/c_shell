@@ -171,35 +171,10 @@ void executeCommands(char *args[], int arg_count, char (*path)[200]) {
 
 void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
     if (arg_count > 1) {
-        char *commands[MAX_COMMANDS][MAX_ARGUMENTS + 1]; //hold commands and their arguments
-        int cmd_index = 0;
-        int arg_index = 0;
 
         for (int i = 0; i < arg_count; i++) {
-            if (i > 0 && i < arg_count - 1 && strcmp(args[i + 1], "&") != 0) {
-                //found "&"
-                commands[cmd_index][arg_index] = NULL;
-                cmd_index++;
-                arg_index = 0;
-            } else {
-                //copy the command or argument into the commands array
-                commands[cmd_index][arg_index] = strdup(args[i]);
-                arg_index++;
-            }
-        }
-        // Terminate the last command
-        commands[cmd_index][arg_index] = NULL;
-
-        // execute each command
-        for (int j = 0; j <= cmd_index; j++) {
-            executeCommands(commands[j], sizeof(commands[j]), path);
-        }
-
-        // free commands[][]
-        for (int j = 0; j <= cmd_index; j++) {
-            for (int k = 0; commands[j][k] != NULL; k++) {
-                free(commands[j][k]);
-            }
+            //printf("Executing: '%s'\n", args[i]);
+            executeCommands(&args[i], sizeof(args[i]), path);
         }
     }
 } // end executeParallelCmd()
