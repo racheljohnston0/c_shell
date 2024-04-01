@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define MAX_PATH_SIZE 200
 #define MAX_PATH_COUNT 100
@@ -33,6 +34,14 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
         //need to tokenize the second part of the command
         char line[100];
         char *tokens[MAX_ARGUMENTS];
+        int index = 0;
+
+        for (int i = 0; i < arg_count; i++)
+        {
+            strcpy(&line[index], args[i]);
+            index += strlen(args[i]);
+        }
+
         strcpy(line, args[1]);
         line[strcspn(line, "\n")] = '\0';
         int count = 0;
@@ -45,7 +54,7 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
         }
 
         if (count != 0) {
-            char *temp_path = malloc(sizeof(path[0]));
+            char *temp_path = malloc(MAX_PATH_SIZE);
             strcpy(temp_path, path[0]);
             strcat(temp_path, "/");
             strcat(temp_path, args[0]);
@@ -98,6 +107,7 @@ int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, in
         }
     }
     if (redirection_flag == 0) {
+        //printf("about to enter redirect\n");
         redirect(path, args, arg_count);
     } else if (access(temp_path, X_OK) == 0) {
         pid_t pid = fork();
@@ -105,12 +115,14 @@ int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, in
             printError();
             exit(1);
         } else if (pid == 0) { //child process executes command
+            //printf("about to execute evecv()\n");
             execv(temp_path, args);
         } else { //parent process waits for child to complete
             int status;
             waitpid(pid, &status, 0);
         }
     } else { //file not found
+        //printf("Returning -1 in executeAllOtherCommands\n");
         return -1;
     }
     free(temp_path);
@@ -174,7 +186,40 @@ void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
 
         for (int i = 0; i < arg_count; i++) {
             //printf("Executing: '%s'\n", args[i]);
-            executeCommands(&args[i], sizeof(args[i]), path);
+
+            char *command[MAX_ARGUMENTS];
+
+            args[i][strcspn(args[i], "\n")] = '\0';
+            int command_count = 0;
+            char delimiter = ' ';
+
+            char *token = strtok(args[i], &delimiter);
+            while (token != NULL && arg_count < MAX_ARGUMENTS - 1) {
+                while (*token != '\0' && isspace(*token)) {
+                    token++;
+                }
+                char *end = token + strlen(token) - 1;
+                while (end > token && isspace(*end)) {
+                    *end-- = '\0';
+                }
+
+                //printf("Entered while loop for tokenizing in parallel command.\n");
+                command[command_count] = token;
+                command_count++;
+                token = strtok(NULL, &delimiter);
+            }
+            command[command_count] = NULL;
+
+//            printf("Tokenized by '%c'\n", delimiter);
+//
+//            for (int i = 0; i < command_count; i++)
+//            {
+//                printf("'%s'\n", command[i]);
+//            }
+
+            if (arg_count != 0 ) {
+                executeCommands(command, command_count, path);
+            }
         }
     }
 } // end executeParallelCmd()
