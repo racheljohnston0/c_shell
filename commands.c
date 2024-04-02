@@ -12,6 +12,7 @@
 #define MAX_COMMANDS 10
 
 int num_of_paths = 0;
+bool parallel_cmd_flag = false;
 
 void printError()
 {
@@ -30,8 +31,10 @@ void changeDirectory(char *dir)
 
 void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
 {
+    //printf("in redirect\n");
     if (strchr(args[1], '>') == strrchr(args[1], '>') && (arg_count <= 3)) {
         //need to tokenize the second part of the command
+        //printf("passed first check\n");
         char line[100];
         char *tokens[MAX_ARGUMENTS];
         int index = 0;
@@ -42,7 +45,12 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
             index += strlen(args[i]);
         }
 
-        strcpy(line, args[1]);
+        if (!parallel_cmd_flag) {
+            //printf("Parallel command = false\n");
+            strcpy(line, args[1]);
+        }
+
+        //strcpy(line, args[1]);
         line[strcspn(line, "\n")] = '\0';
         int count = 0;
         char *token = strtok(line, ">");
@@ -54,13 +62,33 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
         }
 
         if (count != 0) {
+            int paths_tried = 0;
             char *temp_path = malloc(MAX_PATH_SIZE);
-            strcpy(temp_path, path[0]);
+            strcpy(temp_path, path[paths_tried]);
             strcat(temp_path, "/");
             strcat(temp_path, args[0]);
 
-            strcpy(args[1], tokens[0]);
+            //printf("Temp path: %s\n", temp_path);
 
+            //if (!parallel_cmd_flag) {
+                strcpy(args[1], tokens[0]);
+           // }
+
+            for (int i = 0; i < arg_count; i++)
+            {
+                //printf("args[%d]: %s\n", i, args[i]);
+            }
+
+            while ((access(temp_path, X_OK) != 0) && paths_tried < num_of_paths)
+            {
+                strcpy(temp_path, path[paths_tried]);
+                strcat(temp_path, "/");
+                strcat(temp_path, args[0]);
+                //printf("temp path: %s\n", temp_path);
+                paths_tried++;
+            }
+
+            //printf("about to fork() in redirect\n");
             pid_t pid = fork();
             if (pid < 0) {
                 printError();
@@ -75,12 +103,15 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
                 if (dup2(fd, STDOUT_FILENO) == -1) {
                     exit(EXIT_FAILURE);
                 }
-                execv(temp_path, args);
                 close(fd);
+                if (pid == 0) {
+                    execv(temp_path, args);
+                }
             } else { //parent process waits for child to complete
                 int status;
                 waitpid(pid, &status, 0);
             }
+            free(temp_path);
         } else {
             //no arguments after '>'
             printError();
@@ -89,28 +120,31 @@ void redirect(char (*path)[MAX_PATH_SIZE], char *args[], int arg_count)
         //Too many '>' or too many arguments
         printError();
     }
+
 } // end redirect function
 
 int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, int arg_count)
 {
-    char *temp_path = malloc(sizeof(path[i]));
+    char *temp_path = malloc(MAX_PATH_SIZE);
     strcpy(temp_path, path[i]);
     strcat(temp_path, "/");
     strcat(temp_path, args[0]);
 
-    int redirection_flag = -1;
+    bool redirection_flag = false;
 
     if (args[i + 1] != NULL) {
         if (strchr(args[i + 1], '>') != NULL)
         {
-            redirection_flag = 0;
+            redirection_flag = true;
         }
     }
-    if (redirection_flag == 0) {
+    if (redirection_flag) {
         //printf("about to enter redirect\n");
         redirect(path, args, arg_count);
-    } else if (access(temp_path, X_OK) == 0) {
+    } else if ((access(temp_path, X_OK) == 0))  {
+        //printf("about to fork...\n");
         pid_t pid = fork();
+        //printf("forked in executeAllOtherCommands\n");
         if (pid < 0) {
             printError();
             exit(1);
@@ -122,7 +156,8 @@ int executeAllOtherCommands(char (*path)[MAX_PATH_SIZE], char *args[], int i, in
             waitpid(pid, &status, 0);
         }
     } else { //file not found
-        //printf("Returning -1 in executeAllOtherCommands\n");
+        //printf("File not found: %s\n", temp_path);
+        free(temp_path);
         return -1;
     }
     free(temp_path);
@@ -150,12 +185,22 @@ void executeCommands(char *args[], int arg_count, char (*path)[200]) {
                 path[i][j] = '\0';
             }
         }
+
         if (args[1] != NULL) {
             for (int i = 1; i < arg_count; i++) {
                 char cwd[128];
-                if (getcwd(cwd, sizeof(cwd)) != NULL) {
+                if (strcmp(args[i], "/bin") == 0) {
+                    strcpy(path[num_of_paths], args[i]);
+                    num_of_paths++;
+                    continue;
+                }
+                else if (getcwd(cwd, sizeof(cwd)) != NULL) {
                     strcat(cwd, "/");
-                    strcat(cwd, args[i]);
+                    if (args[i][0] != '/') { // If path doesn't start with '/'
+                        strcat(cwd, args[i]);
+                    } else { // If path starts with '/'
+                        strcat(cwd, &args[i][1]);
+                    }
                     strcpy(path[num_of_paths], cwd);
                     num_of_paths++;
                 }
@@ -183,7 +228,7 @@ void executeCommands(char *args[], int arg_count, char (*path)[200]) {
 
 void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
     if (arg_count > 1) {
-
+        parallel_cmd_flag = true;
         for (int i = 0; i < arg_count; i++) {
             //printf("Executing: '%s'\n", args[i]);
 
@@ -221,5 +266,6 @@ void executeParallelCmd(char *args[], int arg_count, char (*path)[200]) {
                 executeCommands(command, command_count, path);
             }
         }
+        exit(0);
     }
 } // end executeParallelCmd()

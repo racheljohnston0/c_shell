@@ -44,7 +44,7 @@ void interactiveMode()
                 *end-- = '\0';
             }
 
-            printf("Entered while loop for tokenizing.\n");
+            //printf("Entered while loop for tokenizing.\n");
             args[arg_count] = token;
             arg_count++;
             token = strtok(NULL, &delimiter);
