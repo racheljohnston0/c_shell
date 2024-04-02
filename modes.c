@@ -14,8 +14,7 @@
 
 char path[MAX_PATH_COUNT][MAX_PATH_SIZE] = {"/bin"};
 
-void interactiveMode()
-{
+void interactiveMode() {
 	printf("wish> ");
     char input[MAX_COMMAND_LENGTH];
     char *args[MAX_ARGUMENTS];
@@ -43,33 +42,22 @@ void interactiveMode()
             while (end > token && isspace(*end)) {
                 *end-- = '\0';
             }
-
-            //printf("Entered while loop for tokenizing.\n");
             args[arg_count] = token;
             arg_count++;
             token = strtok(NULL, &delimiter);
         }
         args[arg_count] = NULL;
 
-        printf("Tokenized by '%c'\n", delimiter);
-
-        for (int i = 0; i < arg_count; i++)
-        {
-            printf("%s\n", args[i]);
-        }
-
-        if (parallel_command_flag == true)
-        {
+        if (parallel_command_flag == true) {
             executeParallelCmd(args, arg_count, path);
         }
         else if (arg_count != 0 ) {
             executeCommands(args, arg_count, path);
         }
     }
-}
+} // end interactiveMode()
 
-void batchMode(char *filename)
-{
+void batchMode(char *filename) {
 	FILE *file = fopen(filename, "r");
 	if (file == NULL) {
 		printError();
@@ -84,8 +72,7 @@ void batchMode(char *filename)
             int arg_count = 0;
             char delimiter = ' ';
 
-            if (strchr(line, '&') != NULL)
-            {
+            if (strchr(line, '&') != NULL) {
                 delimiter = '&';
                 parallel_command_flag = true;
             }
@@ -107,14 +94,12 @@ void batchMode(char *filename)
             }
             args[arg_count] = NULL;
 
-            if (parallel_command_flag == true)
-            {
+            if (parallel_command_flag == true) {
                 executeParallelCmd(args, arg_count, path);
-            }
-            else if (arg_count != 0 ) {
+            } else if (arg_count != 0 ) {
                 executeCommands(args, arg_count, path);
             }
         }
         fclose(file);
     }
-}
+} // end batchMode()
